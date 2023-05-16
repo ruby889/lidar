@@ -5,6 +5,8 @@
 #include <map>
 #include "ydlidar_protocol.h"
 #include "ydlidar_def.h"
+#include <core/base/datatype.h>
+
 
 namespace ydlidar {
 namespace core {
@@ -93,6 +95,17 @@ class DriverInterface {
   */
   PropertyBuilderByName(bool, HeartBeat, protected);
 
+  //是否开启调试
+  PropertyBuilderByName(bool, Debug, protected);
+
+  //扫描频率
+  PropertyBuilderByName(float, ScanFreq, protected);
+
+  //是否底板优先
+  PropertyBuilderByName(bool, Bottom, protected);
+  //是否已获取到设备信息
+  PropertyBuilderByName(bool, HasDeviceInfo, protected);
+
   /**
    * @par Constructor
    *
@@ -121,6 +134,10 @@ class DriverInterface {
     m_driverErrno         = NoError;
     m_InvalidNodeCount    = 0;
     m_BufferSize          = 0;
+    m_Debug = false;
+    m_ScanFreq = 0;
+    m_Bottom = true;
+    m_HasDeviceInfo = false;
   }
 
   virtual ~DriverInterface() {}
@@ -234,8 +251,12 @@ class DriverInterface {
    *   true	intensity
    *   false no intensity
    */
-  virtual void setIntensities(const bool &isintensities) = 0;
-  virtual void setIntensityBit(int bit) {m_intensityBit = bit;}
+  virtual void setIntensities(const bool &isintensities) {
+    m_intensities = isintensities;
+  }
+  virtual void setIntensityBit(int bit) {
+    m_intensityBit = bit;
+  }
 
   /**
    * @brief whether to support hot plug \n
@@ -272,6 +293,12 @@ class DriverInterface {
    */
   virtual result_t getDeviceInfo(device_info &info,
                                  uint32_t timeout = DEFAULT_TIMEOUT) = 0;
+  
+  //获取设备信息
+  virtual bool getDeviceInfoEx(device_info &info) {
+    UNUSED(info); 
+    return false;
+  }
 
   /**
    * @brief Turn on scanning \n
@@ -293,7 +320,6 @@ class DriverInterface {
    */
   virtual result_t stop() = 0;
 
-
   /**
    * @brief Get a circle of laser data \n
    * @param[in] nodebuffer Laser data
@@ -313,11 +339,13 @@ class DriverInterface {
    * @param[in] timeout      timeout
    * @return return status
    * @retval RESULT_OK       success
-   * @retval RESULT_FAILE    failed
+   * @retval RESULT_FAIL    failed
    * @note Non-scan state, perform currect operation.
    */
   virtual result_t getScanFrequency(scan_frequency &frequency,
-                                    uint32_t timeout = DEFAULT_TIMEOUT) = 0;
+                                    uint32_t timeout = DEFAULT_TIMEOUT) {
+    return RESULT_FAIL;
+  }
 
   /**
    * @brief Increase the scanning frequency by 1.0 HZ \n
@@ -329,7 +357,9 @@ class DriverInterface {
    * @note Non-scan state, perform currect operation.
    */
   virtual result_t setScanFrequencyAdd(scan_frequency &frequency,
-                                       uint32_t timeout = DEFAULT_TIMEOUT) = 0;
+                                       uint32_t timeout = DEFAULT_TIMEOUT) {
+    return RESULT_FAIL;
+  }
 
   /**
    * @brief Reduce the scanning frequency by 1.0 HZ \n
@@ -341,7 +371,9 @@ class DriverInterface {
    * @note Non-scan state, perform currect operation.
    */
   virtual result_t setScanFrequencyDis(scan_frequency &frequency,
-                                       uint32_t timeout = DEFAULT_TIMEOUT) = 0;
+                                       uint32_t timeout = DEFAULT_TIMEOUT) {
+    return RESULT_FAIL;
+  }
 
   /**
    * @brief Increase the scanning frequency by 0.1 HZ \n
@@ -353,7 +385,9 @@ class DriverInterface {
    * @note Non-scan state, perform currect operation.
    */
   virtual result_t setScanFrequencyAddMic(scan_frequency &frequency,
-                                          uint32_t timeout = DEFAULT_TIMEOUT) = 0;
+                                          uint32_t timeout = DEFAULT_TIMEOUT) {
+    return RESULT_FAIL;
+  }
 
   /**
    * @brief Reduce the scanning frequency by 0.1 HZ \n
@@ -365,7 +399,9 @@ class DriverInterface {
    * @note Non-scan state, perform currect operation.
    */
   virtual result_t setScanFrequencyDisMic(scan_frequency &frequency,
-                                          uint32_t timeout = DEFAULT_TIMEOUT) = 0;
+                                          uint32_t timeout = DEFAULT_TIMEOUT) {
+    return RESULT_FAIL;
+  }
 
   /**
    * @brief Get lidar sampling frequency \n
@@ -377,7 +413,9 @@ class DriverInterface {
    * @note Non-scan state, perform currect operation.
    */
   virtual result_t getSamplingRate(sampling_rate &rate,
-                                   uint32_t timeout = DEFAULT_TIMEOUT) = 0;
+                                   uint32_t timeout = DEFAULT_TIMEOUT) {
+    return RESULT_FAIL;
+  }
 
   /**
    * @brief Set the lidar sampling frequency \n
@@ -389,7 +427,9 @@ class DriverInterface {
    * @note Non-scan state, perform currect operation.
    */
   virtual result_t setSamplingRate(sampling_rate &rate,
-                                   uint32_t timeout = DEFAULT_TIMEOUT) = 0;
+                                   uint32_t timeout = DEFAULT_TIMEOUT) {
+    return RESULT_FAIL;
+  }
 
   /**
    * @brief get lidar zero offset angle \n
@@ -401,7 +441,9 @@ class DriverInterface {
    * @note Non-scan state, perform currect operation.
    */
   virtual result_t getZeroOffsetAngle(offset_angle &angle,
-                                      uint32_t timeout = DEFAULT_TIMEOUT) = 0;
+                                      uint32_t timeout = DEFAULT_TIMEOUT) {
+    return RESULT_FAIL;
+  }
 
   /**
    * @brief set lidar heart beat \n
@@ -414,7 +456,9 @@ class DriverInterface {
    */
 
   virtual result_t setScanHeartbeat(scan_heart_beat &beat,
-                                    uint32_t timeout = DEFAULT_TIMEOUT) = 0;
+                                    uint32_t timeout = DEFAULT_TIMEOUT) {
+    return RESULT_FAIL;
+  }
 
   /**
    * @brief setDriverError
@@ -449,62 +493,70 @@ class DriverInterface {
   virtual result_t getIntensityFlag() {return RESULT_OK;}
 
  public:
-  enum YDLIDAR_MODLES {
-    YDLIDAR_F4      = 1,/**< F4 LiDAR Model. */
-    YDLIDAR_T1      = 2,/**< T1 LiDAR Model. */
-    YDLIDAR_F2      = 3,/**< F2 LiDAR Model. */
-    YDLIDAR_S4      = 4,/**< S4 LiDAR Model. */
-    YDLIDAR_S2PRO   = YDLIDAR_S4,/**< S2PRO LiDAR Model. */
-    YDLIDAR_G4      = 5,/**< G4 LiDAR Model. */
-    YDLIDAR_X4      = 6,/**< X4 LiDAR Model. */
-    YDLIDAR_G4PRO   = 7,/**< G4PRO LiDAR Model. */
-    YDLIDAR_F4PRO   = 8,/**< F4PRO LiDAR Model. */
-    YDLIDAR_R2      = 9,/**< R2 LiDAR Model. */
-    YDLIDAR_G10     = 10,/**< G10 LiDAR Model. */
-    YDLIDAR_S4B     = 11,/**< S4B LiDAR Model. */
-    YDLIDAR_S2      = 12,/**< S2 LiDAR Model. */
-    YDLIDAR_G6      = 13,/**< G6 LiDAR Model. */
-    YDLIDAR_G2A     = 14,/**< G2A LiDAR Model. */
-    YDLIDAR_G2B     = 15,/**< G2 LiDAR Model. */
-    YDLIDAR_G2C     = 16,/**< G2C LiDAR Model. */
-    YDLIDAR_G4B     = 17,/**< G4B LiDAR Model. */
-    YDLIDAR_G4C     = 18,/**< G4C LiDAR Model. */
-    YDLIDAR_G1      = 19,/**< G1 LiDAR Model. */
-    YDLIDAR_G5      = 20,/**< G5 LiDAR Model. */
-    YDLIDAR_G7      = 21,/**< G7 LiDAR Model. */
+   enum YDLIDAR_MODLES
+   {
+     YDLIDAR_None = 0,
+     YDLIDAR_F4 = 1,             /**< F4 LiDAR Model. */
+     YDLIDAR_T1 = 2,             /**< T1 LiDAR Model. */
+     YDLIDAR_F2 = 3,             /**< F2 LiDAR Model. */
+     YDLIDAR_S4 = 4,             /**< S4 LiDAR Model. */
+     YDLIDAR_S2PRO = YDLIDAR_S4, /**< S2PRO LiDAR Model. */
+     YDLIDAR_G4 = 5,             /**< G4 LiDAR Model. */
+     YDLIDAR_X4 = 6,             /**< X4 LiDAR Model. */
+     YDLIDAR_G4PRO = 7,          /**< G4PRO LiDAR Model. */
+     YDLIDAR_F4PRO = 8,          /**< F4PRO LiDAR Model. */
+     YDLIDAR_R2 = 9,             /**< R2 LiDAR Model. */
+     YDLIDAR_G10 = 10,           /**< G10 LiDAR Model. */
+     YDLIDAR_S4B = 11,           /**< S4B LiDAR Model. */
+     YDLIDAR_S2 = 12,            /**< S2 LiDAR Model. */
+     YDLIDAR_G6 = 13,            /**< G6 LiDAR Model. */
+     YDLIDAR_G2A = 14,           /**< G2A LiDAR Model. */
+     YDLIDAR_G2B = 15,           /**< G2 LiDAR Model. */
+     YDLIDAR_G2C = 16,           /**< G2C LiDAR Model. */
+     YDLIDAR_G4B = 17,           /**< G4B LiDAR Model. */
+     YDLIDAR_G4C = 18,           /**< G4C LiDAR Model. */
+     YDLIDAR_G1 = 19,            /**< G1 LiDAR Model. */
+     YDLIDAR_G5 = 20,            /**< G5 LiDAR Model. */
+     YDLIDAR_G7 = 21,            /**< G7 LiDAR Model. */
+     YDLIDAR_SCL = 22,           // SCL雷达
 
-    YDLIDAR_GS2     = 51, //GS2雷达
-    YDLIDAR_GS1     = 52, //GS1雷达
+     YDLIDAR_GS2 = 51, // GS2雷达
+     YDLIDAR_GS1 = 52, // GS1雷达
+     YDLIDAR_GS5 = 53, // GS5雷达
+     YDLIDAR_GS6 = 54, // GS6雷达
 
-    YDLIDAR_TG15    = 100,/**< TG15 LiDAR Model. */
-    YDLIDAR_TG30    = 101,/**< T30 LiDAR Model. */
-    YDLIDAR_TG50    = 102,/**< TG50 LiDAR Model. */
+     YDLIDAR_TG15 = 100, /**< TG15 LiDAR Model. */
+     YDLIDAR_TG30 = 101, /**< T30 LiDAR Model. */
+     YDLIDAR_TG50 = 102, /**< TG50 LiDAR Model. */
 
-    YDLIDAR_TSA     = 130,/**< TSA LiDAR Model. */
-    YDLIDAR_Tmini   = 140,/**< Tmini LiDAR Model. */
-    YDLIDAR_TminiPRO = 150,/**< Tmini PRO LiDAR Model. */
+     YDLIDAR_TSA = 130,      /**< TSA LiDAR Model. */
+     YDLIDAR_Tmini = 140,    /**< Tmini LiDAR Model. */
+     YDLIDAR_TminiPRO = 150, /**< Tmini PRO LiDAR Model. */
 
-    YDLIDAR_T15     = 200,/**< T15 LiDAR Model. */
+     YDLIDAR_SDM15 = 160, // SDM15单点雷达
 
-    YDLIDAR_Tail,
-  };
+     YDLIDAR_T15 = 200, /**< T15 LiDAR Model. */
 
-  enum YDLIDAR_RATE {
-    YDLIDAR_RATE_4K = 0,/**< 4K sample rate code */
-    YDLIDAR_RATE_8K = 1,/**< 8K sample rate code */
-    YDLIDAR_RATE_9K = 2,/**< 9K sample rate code */
-    YDLIDAR_RATE_10K = 3,/**< 10K sample rate code */
-  };
+     YDLIDAR_Tail,
+   };
+
+   enum YDLIDAR_RATE
+   {
+     YDLIDAR_RATE_4K = 0,  /**< 4K sample rate code */
+     YDLIDAR_RATE_8K = 1,  /**< 8K sample rate code */
+     YDLIDAR_RATE_9K = 2,  /**< 9K sample rate code */
+     YDLIDAR_RATE_10K = 3, /**< 10K sample rate code */
+   };
 
  public:
   enum {
     DEFAULT_TIMEOUT = 2000,    /**< Default timeout. */
     DEFAULT_HEART_BEAT = 1000, /**< Default heartbeat timeout. */
     MAX_SCAN_NODES = 7200,	   /**< Default Max Scan Count. */
-    DEFAULT_TIMEOUT_COUNT = 10, /**< Default Timeout Count. */
+    DEFAULT_TIMEOUT_COUNT = 1, /**< Default Timeout Count. */
   };
 
- protected:
+protected:
   /* Variable for LIDAR compatibility */
   /// LiDAR Scanning state
   bool            m_isScanning = false;
@@ -512,15 +564,14 @@ class DriverInterface {
   bool            m_isConnected = false;
   /// Scan Data Event
   Event           _dataEvent;
-  /// Data Locker
+  /// Data Locker（不支持嵌套）
   Locker          _lock;
   /// Parse Data thread
   Thread          _thread;
-  /// command locker
+  /// command locker（不支持嵌套）
   Locker          _cmd_lock;
-  /// driver error locker
+  /// driver error locker（不支持嵌套）
   Locker          _error_lock;
-
 
   /// LiDAR com port or IP Address
   std::string serial_port;
@@ -543,7 +594,7 @@ class DriverInterface {
   bool isAutoReconnect;
   /// auto connecting state
   bool isAutoconnting;
-  lidarConfig     m_config;
+  lidarConfig m_config;
 
   /// number of last error
   DriverError m_driverErrno;
@@ -551,7 +602,6 @@ class DriverInterface {
   ///invalid node count
   int m_InvalidNodeCount;
   size_t m_BufferSize;
-
 };
 
 }//common

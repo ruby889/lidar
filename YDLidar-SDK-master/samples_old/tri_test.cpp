@@ -1,4 +1,4 @@
-/*********************************************************************
+﻿/*********************************************************************
  * Software License Agreement (BSD License)
  *
  *  Copyright (c) 2018, EAIBOT, Inc.
@@ -36,11 +36,8 @@
 #include <string>
 #include <algorithm>
 #include <cctype>
-#include <fstream>
-#include <math.h>
-
-// #include "matplotlibcpp.h"
-// namespace plt = matplotlibcpp;
+#include <core/base/timer.h>
+#include <core/common/ydlidar_help.h>
 
 using namespace std;
 using namespace ydlidar;
@@ -48,6 +45,7 @@ using namespace ydlidar;
 #if defined(_MSC_VER)
 #pragma comment(lib, "ydlidar_sdk.lib")
 #endif
+
 /**
  * @brief ydlidar test
  * @param argc
@@ -63,31 +61,15 @@ using namespace ydlidar;
  * Step7: Uninitialize the SDK and Disconnect the LiDAR.(::CYdLidar::disconnecting)\n
  */
 
-struct PointStruct{
-  int id;
-  int obj_type;
-  int obj_id;
-  float angle;
-  float range;
-  float intensity;
-  float accum_angle;
-  PointStruct* prev;
-  PointStruct* next;
-};
-
-float calDistance(PointStruct* p1, PointStruct* p2){
-  float x1,x2,y1,y2;
-  float theta1 = p1->angle * M_PI / 180.0; 
-  float theta2 = p2->angle * M_PI / 180.0; 
-  x1 = sin(theta1)*p1->range;
-  y1 = cos(theta1)*p1->range;
-  x2 = sin(theta2)*p2->range;
-  y2 = cos(theta2)*p2->range;
-  return sqrt(pow(y1-y2, 2) + pow(x2-x1, 2));
-};
-
 int main(int argc, char *argv[])
 {
+  printf("__   ______  _     ___ ____    _    ____  \n");
+  printf("\\ \\ / /  _ \\| |   |_ _|  _ \\  / \\  |  _ \\ \n");
+  printf(" \\ V /| | | | |    | || | | |/ _ \\ | |_) | \n");
+  printf("  | | | |_| | |___ | || |_| / ___ \\|  _ <  \n");
+  printf("  |_| |____/|_____|___|____/_/   \\_\\_| \\_\\ \n");
+  printf("\n");
+  fflush(stdout);
   std::string port;
   ydlidar::os_init();
 
@@ -105,7 +87,7 @@ int main(int argc, char *argv[])
 
     for (it = ports.begin(); it != ports.end(); it++)
     {
-      printf("%d. %s\n", id, it->first.c_str());
+      printf("[%d] %s %s\n", id, it->first.c_str(), it->second.c_str());
       id++;
     }
 
@@ -146,25 +128,25 @@ int main(int argc, char *argv[])
   std::map<int, int> baudrateList;
   baudrateList[0] = 115200;
   baudrateList[1] = 128000;
-  baudrateList[2] = 153600;
-  baudrateList[3] = 230400;
-  baudrateList[4] = 460800;
-  baudrateList[5] = 512000;
+  baudrateList[2] = 150000;
+  baudrateList[3] = 153600;
+  baudrateList[4] = 230400;
+  baudrateList[5] = 460800;
+  baudrateList[6] = 512000;
 
   printf("Baudrate:\n");
 
   for (std::map<int, int>::iterator it = baudrateList.begin();
        it != baudrateList.end(); it++)
   {
-    printf("%d. %d\n", it->first, it->second);
+    printf("[%d] %d\n", it->first, it->second);
   }
 
   while (ydlidar::os_isOk())
   {
     printf("Please select the lidar baudrate:");
     std::string number;
-    // std::cin >> number;
-    number = "2";
+    std::cin >> number;
 
     if ((size_t)atoi(number.c_str()) > baudrateList.size())
     {
@@ -182,9 +164,8 @@ int main(int argc, char *argv[])
 
   bool isSingleChannel = false;
   std::string input_channel;
-  printf("Whether the Lidar is one-way communication[yes/no]:");
-  // std::cin >> input_channel;
-  input_channel = "yes";
+  printf("Whether the Lidar is one-way communication [yes/no]:");
+  std::cin >> input_channel;
   std::transform(input_channel.begin(), input_channel.end(),
                  input_channel.begin(),
                  [](unsigned char c)
@@ -217,8 +198,8 @@ int main(int argc, char *argv[])
       break;
     }
 
-    fprintf(stderr,
-            "Invalid scan frequency,The scanning frequency range is 5 to 12 HZ, Please re-enter.\n");
+    fprintf(stderr, "Invalid scan frequency,"
+      "The scanning frequency range is 5 to 12 HZ, Please re-enter.\n");
   }
 
   if (!ydlidar::os_isOk())
@@ -268,7 +249,7 @@ int main(int argc, char *argv[])
   /// one-way communication
   laser.setlidaropt(LidarPropSingleChannel, &isSingleChannel, sizeof(bool));
   /// intensity
-  b_optvalue = true;
+  b_optvalue = false;
   laser.setlidaropt(LidarPropIntenstiy, &b_optvalue, sizeof(bool));
   /// Motor DTR
   b_optvalue = false;
@@ -295,6 +276,9 @@ int main(int argc, char *argv[])
   laser.enableGlassNoise(false);
   laser.enableSunNoise(false);
 
+  //设置是否底板优先
+  laser.setBottomPriority(true);
+
   bool ret = laser.initialize();
   if (!ret)
   {
@@ -308,65 +292,47 @@ int main(int argc, char *argv[])
   {
     fprintf(stderr, "Fail to start %s\n", laser.DescribeError());
     fflush(stderr);
-    std::cin.get();
     return -1;
   }
-  
+
   //获取用户版本
   if (ret && ydlidar::os_isOk())
   {
     std::string userVersion;
     if (laser.getUserVersion(userVersion))
     {
-      printf("[YDLIDAR]: User version %s\n", userVersion.c_str());
+      printf("User version %s\n", userVersion.c_str());
     }
   }
 
-  FILE * pFileTXT = fopen ("scan_pts.txt","a");
+  //获取设备信息
+  if (ret)
+  {
+    device_info di;
+    memset(&di, 0, DEVICEINFOSIZE);
+    if (!laser.getDeviceInfo(di)) {
+      ydlidar::core::common::printfVersionInfo(di, "", 0);
+    }
+    else {
+      printf("Fail to get device info\n");
+    }
+  }
+
   LaserScan scan;
-
-  // float robot_facing = PI/2;
-  // float robot_vel = 0.1;
-  // float robot_dec = 0.05;
-  // float robot_radius = 0.05;
-  // float gap_distance = 1.1*robot_radius;
-  // float safety_distance = 1.1*robot_radius;
-  // float s1 = robot_vel*robot_vel/(2*robot_dec); // Decelerating space component
-
   while (ydlidar::os_isOk())
   {
     if (laser.doProcessSimple(scan))
     {
-      printf("Scan received [%u] points inc [%f]\n",
+      printf("Scan received [%u] "
+             "points scanFreq [%.02f]\n",
              (unsigned int)scan.points.size(),
-             scan.config.angle_increment);
+             scan.scanFreq);
       // for (size_t i = 0; i < scan.points.size(); ++i)
       // {
       //   const LaserPoint &p = scan.points.at(i);
       //   printf("%d d %f a %f\n", i, p.range, p.angle * 180.0 / M_PI);
       // }
       fflush(stdout);
-      for(int i =0; i < scan.points.size(); i++){
-        fprintf (pFileTXT, "%f, %f, %f\n", scan.points[i].angle, scan.points[i].range, scan.points[i].intensity);
-      }
-
-      
-      // for(int i =0; i < scan.points.size(); i++){
-      //   float theta = scan.points[i].angle;
-      //   float range = scan.points[i].range;
-      //   float x = range*cos(theta);
-      //   float y = range*sin(theta);
-        
-      //   float angle_diff = abs(theta-robot_facing) if abs(theta-robot_facing) < PI else abs(abs(theta-robot_facing)-PI)
-      //   float D = s1*(cos(angle_diff)**2) + safety_distance if (angle_diff <= np.pi/2) else 0 // Distance threshold
-
-      // }
-
-
-
-
-
-
     }
     else
     {
@@ -374,9 +340,9 @@ int main(int argc, char *argv[])
       fflush(stderr);
     }
   }
+
   laser.turnOff();
   laser.disconnecting();
 
-  fclose (pFileTXT);
   return 0;
 }

@@ -32,22 +32,22 @@
 *  POSSIBILITY OF SUCH DAMAGE.
 *********************************************************************/
 
-/** @page GS2LidarDriver
- * GS2LidarDriver API
+/** @page SDMLidarDriver
+ * SDMLidarDriver API
     <table>
-        <tr><th>Library     <td>GS2LidarDriver
-        <tr><th>File        <td>GS2LidarDriver.h
-        <tr><th>Author      <td>Tony [code at ydlidar com]
+        <tr><th>Library     <td>SDMLidarDriver
+        <tr><th>File        <td>SDMLidarDriver.h
+        <tr><th>Author      <td>ZhanYi [code at ydlidar com]
         <tr><th>Source      <td>https://github.com/ydlidar/YDLidar-SDK
         <tr><th>Version     <td>1.0.0
     </table>
-    This GS2LidarDriver support [TYPE_TRIANGLE](\ref LidarTypeID::TYPE_TRIANGLE) and [TYPE_TOF](\ref LidarTypeID::TYPE_TOF) LiDAR
+    This SDMLidarDriver support [TYPE_SDM](\ref LidarTypeID::TYPE_SDM) LiDAR
 
-* @copyright    Copyright (c) 2018-2020  EAIBOT
-     Jump to the @link ::ydlidar::GS2LidarDriver @endlink interface documentation.
+* @copyright    Copyright (c) @2015-2023 EAIBOT
+     Jump to the @link ::ydlidar::SDMLidarDriver @endlink interface documentation.
 */
-#ifndef GS2_YDLIDAR_DRIVER_H
-#define GS2_YDLIDAR_DRIVER_H
+#ifndef SDM_YDLIDAR_DRIVER_H
+#define SDM_YDLIDAR_DRIVER_H
 
 #include <stdlib.h>
 #include <atomic>
@@ -64,6 +64,55 @@
 #endif
 #endif
 
+#define SDK_SDM_POINT_COUNT 1
+#define SDK_CMD_HEADFLAG0 0xAA //协议头标识1
+#define SDK_CMD_HEADFLAG1 0x55 //协议头标识2
+#define SDK_CMD_STARTSCAN 0x60 //开启测距
+#define SDK_CMD_STOPSCAN 0x61 //停止测距
+#define SDK_CMD_GETVERSION 0x62 //获取版本信息
+#define SDK_CMD_SELFCHECK 0x63 //自检
+#define SDK_CMD_SETFREQ 0x64 //设置输出频率
+#define SDK_CMD_SETFILTER 0x65 //设置滤波
+#define SDK_CMD_SETBAUDRATE 0x66 //设置串口波特率
+#define SDK_CMD_SETOUTPUT 0x67 //设置输出的数据格式
+#define SDK_CMD_RESET 0x68 //恢复出厂设置
+
+//设置1字节对齐
+#pragma pack(1)
+
+//SDM雷达协议头
+struct SdkSdmHead {
+    uint8_t head0 = 0;
+    uint8_t head1 = 0;
+    uint8_t cmd = 0;
+    uint8_t size = 0;
+};
+#define SDKSDMHEADSIZE sizeof(SdkSdmHead)
+//SDM雷达单点数据
+struct SdkSdmPc {
+    uint16_t dist = 0; //距离
+    uint8_t intensity = 0; //强度
+    uint8_t env = 0; //环境干扰数据
+};
+//SDM雷达一包点云数据
+struct SdkSdmPcs {
+    SdkSdmHead head;
+    SdkSdmPc point; //一包数据只有单点
+    uint8_t cs = 0;
+};
+#define SDKSDMPCSSIZE sizeof(SdkSdmPcs)
+//SDM雷达设备信息
+struct SdkSdmDeviceInfo {
+    uint8_t model = 0; //雷达型号码
+    uint8_t hv = 0; //硬件版本
+    uint8_t fvm = 0; //固件主版本
+    uint8_t fvs = 0; //固件子版本
+    uint8_t sn[SDK_SNLEN] = {0}; //序列号
+};
+#define SDKSDMDEVICEINFOSIZE sizeof(SdkSdmDeviceInfo)
+
+#pragma pack()
+
 
 using namespace std;
 
@@ -74,82 +123,27 @@ using namespace core::serial;
 using namespace core::base;
 
 /*!
-* GS2操控类
+* SDM操控类
 */
-class GS2LidarDriver : public DriverInterface {
- public:
-  /**
-    * @brief Set and Get LiDAR single channel.
-    * Whether LiDAR communication channel is a single-channel
-    * @note For a single-channel LiDAR, if the settings are reversed.\n
-    * an error will occur in obtaining device information and the LiDAR will Faied to Start.\n
-    * For dual-channel LiDAR, if th setttings are reversed.\n
-    * the device information cannot be obtained.\n
-    * Set the single channel to match the LiDAR.
-    * @remarks
-    <table>
-         <tr><th>G1/G2/G2A/G2C                          <td>false
-         <tr><th>G4/G4B/G4PRO/G6/F4/F4PRO               <td>false
-         <tr><th>S4/S4B/X4/R2/G4C                       <td>false
-         <tr><th>S2/X2/X2L                              <td>false
-         <tr><th>TG15/TG30/TG50                         <td>false
-         <tr><th>TX8/TX20                               <td>false
-         <tr><th>T5/T15                                 <td>false
-         <tr><th>GS2                                    <td>true
-     </table>
-    * @see DriverInterface::setSingleChannel and DriverInterface::getSingleChannel
-    */
-  PropertyBuilderByName(bool, SingleChannel, private);
-  /**
-  * @brief Set and Get LiDAR Type.
-  * @note Refer to the table below for the LiDAR Type.\n
-  * Set the LiDAR Type to match the LiDAR.
-  * @remarks
-  <table>
-       <tr><th>G1/G2A/G2/G2C                    <td>[TYPE_TRIANGLE](\ref LidarTypeID::TYPE_TRIANGLE)
-       <tr><th>G4/G4B/G4C/G4PRO                 <td>[TYPE_TRIANGLE](\ref LidarTypeID::TYPE_TRIANGLE)
-       <tr><th>G6/F4/F4PRO                      <td>[TYPE_TRIANGLE](\ref LidarTypeID::TYPE_TRIANGLE)
-       <tr><th>S4/S4B/X4/R2/S2/X2/X2L           <td>[TYPE_TRIANGLE](\ref LidarTypeID::TYPE_TRIANGLE)
-       <tr><th>TG15/TG30/TG50/TX8/TX20          <td>[TYPE_TOF](\ref LidarTypeID::TYPE_TOF)
-       <tr><th>T5/T15                           <td>[TYPE_TOF_NET](\ref LidarTypeID::TYPE_TOF_NET)
-       <tr><th>GS2                              <td>[TYPE_GS](\ref LidarTypeID::TYPE_GS)
-   </table>
-  * @see [LidarTypeID](\ref LidarTypeID)
-  * @see DriverInterface::setLidarType and DriverInterface::getLidarType
-  */
-  PropertyBuilderByName(int, LidarType, private);
-  /**
-  * @brief Set and Get Sampling interval.
-  * @note Negative correlation between sampling interval and lidar sampling rate.\n
-  * sampling interval = 1e9 / sampling rate(/s)\n
-  * Set the LiDAR sampling interval to match the LiDAR.
-  * @see DriverInterface::setPointTime and DriverInterface::getPointTime
-  */
-  PropertyBuilderByName(uint32_t, PointTime,private);
-  /*!
-  * A constructor.
-  * A more elaborate description of the constructor.
-  */
-  GS2LidarDriver();
-
-  /*!
-  * A destructor.
-  * A more elaborate description of the destructor.
-  */
-  virtual ~GS2LidarDriver();
-
+class SDMLidarDriver : public DriverInterface 
+{
+public:
+  //构造函数
+  SDMLidarDriver();
+  //析构函数
+  virtual ~SDMLidarDriver();
   /*!
   * @brief 连接雷达 \n
   * 连接成功后，必须使用::disconnect函数关闭
-  * @param[in] port_path 串口号
-  * @param[in] baudrate 波特率，YDLIDAR-GS2 雷达波特率：961200
+  * @param[in] port 串口号
+  * @param[in] baudrate 波特率，YDLIDAR-SDM 雷达波特率：961200
   * @return 返回连接状态
   * @retval 0     成功
   * @retval < 0   失败
   * @note连接成功后，必须使用::disconnect函数关闭
   * @see 函数::GS2LidarDriver::disconnect (“::”是指定有连接功能,可以看文档里的disconnect变成绿,点击它可以跳转到disconnect.)
   */
-  result_t connect(const char *port_path, uint32_t baudrate);
+  result_t connect(const char *port, uint32_t baudrate);
 
   /*!
   * @brief 断开雷达连接
@@ -186,32 +180,12 @@ class GS2LidarDriver : public DriverInterface {
   bool isconnected() const;
 
   /*!
-  * @brief 设置雷达是否带信号质量 \n
-  * 连接成功后，必须使用::disconnect函数关闭
-  * @param[in] isintensities    是否带信号质量:
-  *     true	带信号质量
-  *	  false 无信号质量
-  * @note只有S4B(波特率是153600)雷达支持带信号质量, 别的型号雷达暂不支持
-  */
-  void setIntensities(const bool &isintensities);
-
-  /*!
   * @brief 设置雷达异常自动重新连接 \n
   * @param[in] enable    是否开启自动重连:
   *     true	开启
   *	  false 关闭
   */
   void setAutoReconnect(const bool &enable);
-
-  /*!
-  * @brief 获取雷达设备信息 \n
-  * @param[in] parameters     设备信息
-  * @param[in] timeout  超时时间
-  * @return 返回执行结果
-  * @retval RESULT_OK       获取成功
-  * @retval RESULT_FAILE or RESULT_TIMEOUT   获取失败
-  */
-  result_t getDevicePara(gs_device_para &info,   uint32_t timeout = DEFAULT_TIMEOUT);
 
   /*!
  * @brief 配置雷达地址 \n
@@ -268,14 +242,20 @@ class GS2LidarDriver : public DriverInterface {
   result_t ascendScanData(node_info *nodebuffer, size_t count);
 
   /*!
-  * @brief 重置激光雷达 \n
+  * @brief 重置激光雷达（恢复出厂设置） \n
   * @param[in] timeout      超时时间
   * @return 返回执行结果
   * @retval RESULT_OK       成功
   * @retval RESULT_FAILE    失败
-  * @note 停止扫描后再执行当前操作, 如果在扫描中调用::stop函数停止扫描
+  * @note 停止扫描后再执行当前操作, 如果在扫描中需先调用stop函数停止扫描
   */
   result_t reset(uint8_t addr, uint32_t timeout = DEFAULT_TIMEOUT);
+
+  //设置开启或关闭滤波功能
+  result_t enableFilter(bool yes=true);
+
+  //设置扫描频率
+  result_t setScanFreq(float sf, uint32_t timeout);
 
  protected:
 
@@ -344,40 +324,45 @@ class GS2LidarDriver : public DriverInterface {
   * @retval RESULT_OK       成功
   * @retval RESULT_FAILE    失败
   */
-  result_t sendCommand(uint8_t cmd,
-                       const void *payload = NULL,
-                       size_t payloadsize = 0);
+  result_t sendCmd(uint8_t cmd,
+                       const uint8_t *data = NULL,
+                       size_t size = 0);
 
   /*!
-  * @brief 发送数据到雷达 \n
-  * @param[in] addr 模组地址
-  * @param[in] cmd 	 命名码
-  * @param[in] payload      payload
-  * @param[in] payloadsize      payloadsize
-  * @return 返回执行结果
-  * @retval RESULT_OK       成功
-  * @retval RESULT_FAILE    失败
-  */
-  result_t sendCommand(uint8_t addr,
-                       uint8_t cmd,
-                       const void *payload = NULL,
-                       size_t payloadsize = 0);
-
-  /*!
-  * @brief 等待激光数据包头 \n
-  * @param[in] header 	 包头
-  * @param[in] timeout      超时时间
+  * @brief 等待响应数据 \n
+  * @param[in] cmd 命令字
+  * @param[out] data 响应数据
+  * @param[in] timeout 超时时间
   * @return 返回执行结果
   * @retval RESULT_OK       获取成功
   * @retval RESULT_TIMEOUT  等待超时
   * @retval RESULT_FAILE    获取失败
   * @note 当timeout = -1 时, 将一直等待
   */
-  result_t waitResponseHeader(gs_lidar_ans_header *header,
-                              uint32_t timeout = DEFAULT_TIMEOUT);
-  result_t waitResponseHeaderEx(gs_lidar_ans_header *header,
-                                uint8_t cmd,
-                                uint32_t timeout = DEFAULT_TIMEOUT);
+  result_t waitRes(uint8_t cmd,
+                   uint32_t timeout = DEFAULT_TIMEOUT);
+  result_t waitRes(uint8_t cmd,
+                   std::vector<uint8_t> &data,
+                   uint32_t timeout = DEFAULT_TIMEOUT);
+  /*!
+  * @brief 等待激光数据包头 \n
+  * @param[out] head 包头
+  * @param[in] cmd 命令字
+  * @param[out] data 响应数据
+  * @param[in] timeout 超时时间
+  * @return 返回执行结果
+  * @retval RESULT_OK       获取成功
+  * @retval RESULT_TIMEOUT  等待超时
+  * @retval RESULT_FAILE    获取失败
+  * @note 当timeout = -1 时, 将一直等待
+  */
+  // result_t waitResHeader(SdkSdmHead *head,
+  //                        uint8_t cmd,
+  //                        uint32_t timeout = DEFAULT_TIMEOUT);
+  // result_t waitResHeader(SdkSdmHead *head,
+  //                        uint8_t cmd,
+  //                        std::vector<uint8_t> &data,
+  //                        uint32_t timeout = DEFAULT_TIMEOUT);
 
   /*!
   * @brief 等待固定数量串口数据 \n
@@ -412,60 +397,39 @@ class GS2LidarDriver : public DriverInterface {
   * @retval RESULT_FAILE    发送失败
   */
   result_t sendData(const uint8_t *data, size_t size);
-
-
-  /*!
-  * @brief checkTransDelay
-  */
-  void checkTransDelay();
-
   /*!
   * @brief 关闭数据获取通道 \n
   */
   void disableDataGrabbing();
-
   /*!
   * @brief 设置串口DTR \n
   */
   void setDTR();
-
   /*!
   * @brief 清除串口DTR \n
   */
   void clearDTR();
-
   /*!
    * @brief flushSerial
    */
   void flushSerial();
-
   /*!
    * @brief checkAutoConnecting
    */
   result_t checkAutoConnecting();
-
-  /*!
-   * @brief  换算得出点的距离和角度
-   */
-  void angTransform(uint16_t dist, int n, double *dstTheta, uint16_t *dstDist);
-
-  void addPointsToVec(node_info *nodebuffer, size_t &count);
-
-    /**
-   * @brief 串口错误信息
-   * @param isTCP   TCP or UDP
+  /**
+   * @brief 错误信息
+   * @param isTCP TCP or UDP
    * @return error information
    */
   virtual const char *DescribeError(bool isTCP = false);
-
-    /**
+  /**
    * @brief GS2雷达没有健康信息\n
    * @return result status
    * @retval RESULT_OK success
    * @retval RESULT_FAILE or RESULT_TIMEOUT failed
    */
   virtual result_t getHealth(device_health &health, uint32_t timeout = DEFAULT_TIMEOUT);
-
     /**
    * @brief get Device information \n
    * @param[in] info     Device information
@@ -476,94 +440,13 @@ class GS2LidarDriver : public DriverInterface {
    */
   virtual result_t getDeviceInfo(device_info &info, uint32_t timeout = DEFAULT_TIMEOUT);
 
-    /**
-   * @brief 设置雷达工作模式（目前只针对GS2雷达）
-   * @param[in] mode 雷达工作模式，0为避障模式；1为延边模式
-   * @param[in] addr 雷达地址，第1个雷达地址为0x01；第2个雷达地址为0x02；第3个雷达地址为0x04；
-   * @return 成功返回RESULT_OK，否则返回非RESULT_OK
-   */
-  virtual result_t setWorkMode(int mode=0, uint8_t addr=0x00);
-
-  //未实现的虚函数
-  virtual result_t getScanFrequency(scan_frequency &frequency, uint32_t timeout = DEFAULT_TIMEOUT) { return RESULT_OK; }
-  virtual result_t setScanFrequencyDis(scan_frequency &frequency,
-                                       uint32_t timeout = DEFAULT_TIMEOUT) { return RESULT_OK; }
-  virtual result_t setScanFrequencyAdd(scan_frequency &frequency,
-                                       uint32_t timeout = DEFAULT_TIMEOUT) { return RESULT_OK; }
-  virtual result_t setScanFrequencyAddMic(scan_frequency &frequency,
-                                          uint32_t timeout = DEFAULT_TIMEOUT) { return RESULT_OK; }
-  virtual result_t setScanFrequencyDisMic(scan_frequency &frequency,
-                                          uint32_t timeout = DEFAULT_TIMEOUT) { return RESULT_OK; }
-  virtual result_t getSamplingRate(sampling_rate &rate,
-                                   uint32_t timeout = DEFAULT_TIMEOUT) { return RESULT_OK; }
-  virtual result_t setSamplingRate(sampling_rate &rate,
-                                   uint32_t timeout = DEFAULT_TIMEOUT) { return RESULT_OK; }
-  virtual result_t getZeroOffsetAngle(offset_angle &angle,
-                                      uint32_t timeout = DEFAULT_TIMEOUT) { return RESULT_OK; }
-  virtual result_t setScanHeartbeat(scan_heart_beat &beat,
-                                    uint32_t timeout = DEFAULT_TIMEOUT) { return RESULT_OK; }
-
-public:
-  enum {
-    DEFAULT_TIMEOUT = 2000,    /**< 默认超时时间. */
-    DEFAULT_HEART_BEAT = 1000, /**< 默认检测掉电功能时间. */
-    MAX_SCAN_NODES = 3600,	   /**< 最大扫描点数. */
-    DEFAULT_TIMEOUT_COUNT = 3, //错误数
-  };
-
-  // node_info      *scan_node_buf;    ///< 激光点信息
-  // size_t         scan_node_count;   ///< 激光点数
-  // Event          _dataEvent;        ///< 数据同步事件
-  // Locker         _lock;				///< 线程锁
-  // Locker         _cmd_lock;		///< 串口锁
-  // Thread 	     _thread;		   ///< 线程id
-
- private:
-  int PackageSampleBytes;            ///< 一个包包含的激光点数
-  serial::Serial *_serial;			///< 串口
-  // bool m_intensities;				///< 信号质量状体
-  // uint32_t m_baudrate;				///< 波特率
-  bool isSupportMotorDtrCtrl;	    ///< 是否支持电机控制
-  uint32_t trans_delay;				///< 串口传输一个byte时间
-  int m_sampling_rate;              ///< 采样频率
-  int model;                        ///< 雷达型号
-  int sample_rate;                  ///<
-
-  gs2_node_package package;             ///< 带信号质量协议包
-
-  // uint16_t package_Sample_Index;    ///< 包采样点索引
-  float IntervalSampleAngle;
-  float IntervalSampleAngle_LastPackage;
-  uint8_t CheckSum;                ///< 校验和
-  uint8_t scan_frequence;           ///< 协议中雷达转速
-
-  uint8_t CheckSumCal;
-  uint16_t SampleNumlAndCTCal;
-  uint16_t LastSampleAngleCal;
-  bool CheckSumResult;
-  uint16_t Valu8Tou16;
-
-  // std::string serial_port;///< 雷达端口
-  uint8_t *globalRecvBuffer = nullptr;
-
-  int package_index;
-  uint8_t package_type;
-  bool has_package_error;
-
-  double k0[PackageMaxModuleNums];
-  double k1[PackageMaxModuleNums];
-  double b0[PackageMaxModuleNums];
-  double b1[PackageMaxModuleNums];
-  double bias[PackageMaxModuleNums];
-  bool isValidPoint;
-
-  uint8_t frameNum = 0;  //帧序号
-  uint8_t moduleNum = 0;  //模块编号
-  bool isPrepareToSend = false; //是否准备好发送
-  uint8_t moduleCount = 1; //当前模组数量
-  std::vector<GS2_Multi_Package> packages;
+private:
+  serial::Serial *_serial = nullptr; //串口
+  std::vector<uint8_t> recvBuff; //一包数据缓存
+  device_info info_;
+  device_health health_;
 };
 
-}// namespace ydlidar
+} // namespace ydlidar
 
-#endif // GS2_YDLIDAR_DRIVER_H
+#endif // SDM_YDLIDAR_DRIVER_H

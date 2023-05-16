@@ -5,7 +5,7 @@ project(ydlidar_sdk C CXX)
 # version
 set(YDLIDAR_SDK_VERSION_MAJOR 1)
 set(YDLIDAR_SDK_VERSION_MINOR 1)
-set(YDLIDAR_SDK_VERSION_PATCH 3)
+set(YDLIDAR_SDK_VERSION_PATCH 9)
 set(YDLIDAR_SDK_VERSION ${YDLIDAR_SDK_VERSION_MAJOR}.${YDLIDAR_SDK_VERSION_MINOR}.${YDLIDAR_SDK_VERSION_PATCH})
 
 ##########################################################
@@ -76,13 +76,11 @@ find_package(GTest)
 include_directories(.)
 include_directories(core)
 include_directories(src)
-# include_directories(matplotlib)
 
 #############################################################################
 # addd subdirectory
 add_subdirectory(core)
 add_subdirectory(src)
-# add_subdirectory(matplotlib)
 
 ##############################
 #build examples
