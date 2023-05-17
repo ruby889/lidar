@@ -38,9 +38,13 @@
 #include <cctype>
 #include <fstream>
 #include <math.h>
+#include "../matplotlibcpp.h"
 
 // #include "matplotlibcpp.h"
 // namespace plt = matplotlibcpp;
+
+
+namespace plt = matplotlibcpp;
 
 using namespace std;
 using namespace ydlidar;
@@ -351,20 +355,23 @@ int main(int argc, char *argv[])
       }
 
       
-      // for(int i =0; i < scan.points.size(); i++){
-      //   float theta = scan.points[i].angle;
-      //   float range = scan.points[i].range;
-      //   float x = range*cos(theta);
-      //   float y = range*sin(theta);
+      int n = scan.points.size();
+      vector<float> X(n),Y(n);
+      for(int i =0; i < scan.points.size(); i++){
+        float theta = scan.points[i].angle;
+        float range = scan.points[i].range;
+        float x = range*cos(theta);
+        float y = range*sin(theta);
+        X.at(i) = x;
+        Y.at(i) = y;
         
-      //   float angle_diff = abs(theta-robot_facing) if abs(theta-robot_facing) < PI else abs(abs(theta-robot_facing)-PI)
-      //   float D = s1*(cos(angle_diff)**2) + safety_distance if (angle_diff <= np.pi/2) else 0 // Distance threshold
+        // float angle_diff = abs(theta-robot_facing) if abs(theta-robot_facing) < PI else abs(abs(theta-robot_facing)-PI)
+        // float D = s1*(cos(angle_diff)**2) + safety_distance if (angle_diff <= np.pi/2) else 0 // Distance threshold
 
-      // }
+      }
 
-
-
-
+      plt::plot(X, Y);
+      plt::show();
 
 
     }

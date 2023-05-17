@@ -18,7 +18,7 @@ foreach(child ${APP_LIST})
   string(REPLACE "${curdir}/" "" app_main ${child})
   string(REPLACE ".cpp" "" APP_NAME ${app_main})
   ADD_EXECUTABLE(${APP_NAME} ${app_main})
-  TARGET_LINK_LIBRARIES(${APP_NAME} ydlidar_sdk)
+  TARGET_LINK_LIBRARIES(${APP_NAME} ydlidar_sdk matplotlib_cpp)
 
   INSTALL(TARGETS ${APP_NAME}
     RUNTIME DESTINATION bin
