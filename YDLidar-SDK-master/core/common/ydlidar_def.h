@@ -115,6 +115,7 @@ typedef struct {
   float range;
   /// lidar intensity
   float intensity;
+  float x,y;
 } LaserPoint;
 
 /**
