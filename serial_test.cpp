@@ -8,6 +8,9 @@
 #include <termios.h> // Contains POSIX terminal control definitions
 #include <unistd.h> // write(), read(), close()
 
+#include <climits>
+#include <iostream>
+using namespace std;
 int main() {
   // Open the serial port. Change device path as needed (currently set to an standard FTDI USB-UART cable type device)
   int serial_port = open("/dev/ttyUSB0", O_RDWR);
@@ -54,33 +57,43 @@ int main() {
       return 1;
   }
 
-  // Write to serial port
-  unsigned char msg[] = { 'H', 'e', 'l', 'l', 'o', '\r' };
-  write(serial_port, msg, sizeof(msg));
+  while (true){
+    // Write to serial port
+    // char msg[] = "111, 234";
+    char msg[30];
+    cout << "Type servo pos: ";
+    cin.get(msg, 30);
+    cout <<"\n Typed pos:"<<msg<<"\n";
+    if (*msg == '\n') break;
 
-  // Allocate memory for read buffer, set size according to your needs
-  char read_buf [256];
+    cin.clear();
+    cin.ignore(10000,'\n');
 
-  // Normally you wouldn't do this memset() call, but since we will just receive
-  // ASCII data for this example, we'll set everything to 0 so we can
-  // call printf() easily.
-  memset(&read_buf, '\0', sizeof(read_buf));
+    write(serial_port, msg, sizeof(msg));
 
-  // Read bytes. The behaviour of read() (e.g. does it block?,
-  // how long does it block for?) depends on the configuration
-  // settings above, specifically VMIN and VTIME
-  int num_bytes = read(serial_port, &read_buf, sizeof(read_buf));
+    // Allocate memory for read buffer, set size according to your needs
+    char read_buf [256];
 
-  // n is the number of bytes read. n may be 0 if no bytes were received, and can also be -1 to signal an error.
-  if (num_bytes < 0) {
-      printf("Error reading: %s", strerror(errno));
-      return 1;
+    // Normally you wouldn't do this memset() call, but since we will just receive
+    // ASCII data for this example, we'll set everything to 0 so we can
+    // call printf() easily.
+    memset(&read_buf, '\0', sizeof(read_buf));
+
+    // Read bytes. The behaviour of read() (e.g. does it block?,
+    // how long does it block for?) depends on the configuration
+    // settings above, specifically VMIN and VTIME
+    int num_bytes = read(serial_port, &read_buf, sizeof(read_buf));
+
+    // n is the number of bytes read. n may be 0 if no bytes were received, and can also be -1 to signal an error.
+    if (num_bytes < 0) {
+        printf("Error reading: %s", strerror(errno));
+        return 1;
+    }
+
+    // Here we assume we received ASCII data, but you might be sending raw bytes (in that case, don't try and
+    // print it to the screen like this!)
+    printf("Read %i bytes. Received message: %s", num_bytes, read_buf);
   }
-
-  // Here we assume we received ASCII data, but you might be sending raw bytes (in that case, don't try and
-  // print it to the screen like this!)
-  printf("Read %i bytes. Received message: %s", num_bytes, read_buf);
-
   close(serial_port);
   return 0; // success
 };
