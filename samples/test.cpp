@@ -9,7 +9,7 @@
 #include <limits>
 #include <sstream>
 #include <queue>
-#include "matplotlibcpp.h"
+#include "../matplotlibcpp.h"
 #include <core/common/ydlidar_def.h>
 namespace plt = matplotlibcpp;
 

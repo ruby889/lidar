@@ -31,14 +31,17 @@
  *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
+#define _USE_MATH_DEFINES
 #include "CYdLidar.h"
 #include <iostream>
 #include <string>
 #include <algorithm>
 #include <cctype>
 #include <fstream>
+#include <limits>
 #include <math.h>
 #include "../matplotlibcpp.h"
+#include <core/common/ydlidar_def.h>
 namespace plt = matplotlibcpp;
 
 using namespace std;
@@ -202,17 +205,9 @@ void nextMove(int* move, vector<LaserPoint> points){
       }
   }
   
-  for (int i =0; i <merged_blocks.size() ; i++){
-      LaserPoint &p = merged_blocks[i].front();
-      LaserPoint &q = merged_blocks[i].back();
-      float b1 = atan2(gap_distance/2, p.range);
-      float b2 = atan2(gap_distance/2, q.range);
-      printf("Mergeblocks i: %d, start: %f, end: %f, b1: %f, b2: %f\n", i, p.angle, q.angle, b1, b2);
-  }
-  
   float final_pt_angle = 0;
-  float final_min_cost = std::numeric_limits<float>::max();
-  float start = -M_PI;
+  float final_min_cost = (std::numeric_limits<float>::max)();
+  float start = - M_PI;
   float dd = 0.5*M_PI/180;
   for (int i=0; i < 360; i++){
       float theta = 2*M_PI*i/360 - M_PI;
@@ -241,8 +236,7 @@ void nextMove(int* move, vector<LaserPoint> points){
       }
   }
 
-  std::cout << "final_pt_i.angle: "<<final_pt_angle<<std::endl;
-  if (final_min_cost == std::numeric_limits<float>::max() || abs(final_pt_angle) < robot_turning_delta){
+  if (final_min_cost == (std::numeric_limits<float>::max)() || abs(final_pt_angle) < robot_turning_delta){
       move[0] = 1;
       move[1] = 1;
   }else if (final_pt_angle<0){
@@ -252,6 +246,15 @@ void nextMove(int* move, vector<LaserPoint> points){
       move[0] = 0;
       move[1] = 1;
   }
+
+  for (int i =0; i <merged_blocks.size() ; i++){
+      LaserPoint &p = merged_blocks[i].front();
+      LaserPoint &q = merged_blocks[i].back();
+      float b1 = atan2(gap_distance/2, p.range);
+      float b2 = atan2(gap_distance/2, q.range);
+      printf("Mergeblocks i: %d, start: %f, end: %f, b1: %f, b2: %f\n", i, p.angle, q.angle, b1, b2);
+  }
+  std::cout << "final_pt_i.angle: "<<final_pt_angle<<std::endl;
 
   //Plot all points
   for (int i=0; i <points.size();i++){
@@ -296,7 +299,6 @@ void nextMove(int* move, vector<LaserPoint> points){
 
   printf("Move: %d, %d\nrobot:: (x,y): (%f,%f), angle: %f\n", move[0],move[1],robot_global.x, robot_global.y, robot_global.angle);
   plt::show(); 
-
 
 }
 

@@ -60,9 +60,9 @@ int main() {
   while (true){
     // Write to serial port
     // char msg[] = "111, 234";
-    char msg[30];
+    char msg[10];
     cout << "Type servo pos: ";
-    cin.get(msg, 30);
+    cin.get(msg, 10);
     cout <<"\n Typed pos:"<<msg<<"\n";
     if (*msg == '\n') break;
 
