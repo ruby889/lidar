@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-project(lidar C CXX)
+project(lidar_sdk C CXX)
 
 ############################################################################
 # matplotlib's cmake 
@@ -38,5 +38,11 @@ install(
 include_directories(.)
 include_directories(YDLidar)
 add_subdirectory(YDLidar)
-include_directories(samples)
-add_subdirectory(samples)
+include_directories(src)
+
+FILE(GLOB src_files "./src/*.cpp" "./src/*.h" "./src/*.c")
+set(APP_NAME "lidar")
+add_executable(${APP_NAME}
+  ${src_files}
+)
+target_link_libraries(${APP_NAME} ${PROJECT_NAME} matplotlib_cpp)

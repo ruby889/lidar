@@ -40,9 +40,9 @@
 using namespace std;
 using namespace ydlidar;
 
-#if defined(_MSC_VER)
-#pragma comment(lib, "ydlidar_sdk.lib")
-#endif
+// #if defined(_MSC_VER)
+// #pragma comment(lib, "ydlidar_sdk.lib")
+// #endif
 /**
  * @brief ydlidar test
  * @param argc
