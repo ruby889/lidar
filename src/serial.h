@@ -18,9 +18,9 @@
 
 class Serial{
     public:
-        int open(const char com_id[], int baud_rate=9600, int byte_size=8, int parity=0, int stop_bits=1);
-        int write(BYTE write_buffer[]);
-        int close();
+        int serial_open(const char com_id[], int baud_rate=9600, int byte_size=8, int parity=0, int stop_bits=1);
+        int serial_write(BYTE write_buffer[]);
+        int serial_close();
     private:
         // int serial_port_;
         #ifdef WIN32

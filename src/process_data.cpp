@@ -1,10 +1,15 @@
 
-#include "process_data.h"
-#include <math.h>
-#include <iostream>
+#include "process_data.h" 
+#include <math.h> 
+#include <iostream> 
 #include "../matplotlibcpp.h"
 namespace plt = matplotlibcpp;
 using namespace std;
+static LaserPoint target;
+static LaserPoint robot;
+static LaserPoint robot_global;
+static LaserPoint target_global;
+
 
 float cosRule(const LaserPoint& p1, const LaserPoint& p2){
     float R1 = p1.range;
@@ -45,39 +50,36 @@ bool mergeBlocks(vector<LaserPoint> bk1, vector<LaserPoint>bk2, vector<vector<La
     }
 }
 
-void nextMove(int* move, vector<LaserPoint> points){
-  LaserPoint target;
+void nextMove(RobotCmd& cmd, vector<LaserPoint> points, std::string write_file){
   target.x = 1;
   target.y = 0;
   target.angle = atan2(target.y, target.x);
   target.range = sqrt(target.x*target.x + target.y*target.y);
 
-  LaserPoint robot;
   robot.x = 0;
   robot.y = 0;
   robot.range = 0;
   robot.angle = 0;
 
-  LaserPoint robot_global;
   robot_global.x = 0;
   robot_global.y = 0;
   robot_global.range = 0;
   robot_global.angle = 0;
 
-  LaserPoint target_global;
   target_global.x = 1;
   target_global.y = 0;
   target_global.angle = atan2(target.y, target.x);
   target_global.range = sqrt(target.x*target.x + target.y*target.y);
   
-  float robot_vel = 0.1;
+  float robot_vel = 0.2;
   float robot_dec = 0.05;
-  float robot_width = 0.1;
-  float gap_distance = 1.1*robot_width;
-  float safety_distance = 1.1*robot_width;
+  float robot_width = 0.15;
+  float gap_distance = 1.2*robot_width;
+  float safety_distance = 1.35*robot_width;
   float s1 = robot_vel*robot_vel/(2*robot_dec); // Decelerating space component
   float robot_turning_delta = 0.1;
 
+  //Calculate (x,y) coordinates
   for(int i =0; i < points.size(); i++){
       LaserPoint& prev = points[i-1];
       LaserPoint& p = points[i];
@@ -87,15 +89,14 @@ void nextMove(int* move, vector<LaserPoint> points){
       float y = range*sin(theta);
       p.x = x;
       p.y = y;
-      
       if (range > 10){ 
           points[i].range = 0;
           continue;
       }
   }
 
-  plt::figure_size(1500, 780);
-  // plt::figure_size(1200, 700);
+//   plt::figure_size(1500, 780);
+  plt::figure_size(800, 700);
   vector<float> X, Y, colors;
   vector<float> X1, Y1;
   vector<float> X3, Y3;
@@ -122,7 +123,7 @@ void nextMove(int* move, vector<LaserPoint> points){
       }
   }
   
-  //Merging
+  //Merging close blocks
   vector< vector<LaserPoint>> merged_blocks;
   if (blocks.size() > 0){
       merged_blocks.push_back(blocks[0]);
@@ -146,6 +147,7 @@ void nextMove(int* move, vector<LaserPoint> points){
       }
   }
   
+  //Find the optimal path by distance 
   float final_pt_angle = 0;
   float final_min_cost = (std::numeric_limits<float>::max)();
   float start = - M_PI;
@@ -178,16 +180,19 @@ void nextMove(int* move, vector<LaserPoint> points){
   }
 
   if (final_min_cost == (std::numeric_limits<float>::max)() || abs(final_pt_angle) < robot_turning_delta){
-      move[0] = 1;
-      move[1] = 1;
+      //Forward
+      cmd.servo = 90;
+      cmd.motor = 97;
   }else if (final_pt_angle<0){
-      move[0] = 1;
-      move[1] = 0;
+      //Turn left
+      cmd.servo = 100;
+      cmd.motor = 97;
   }else{
-      move[0] = 0;
-      move[1] = 1;
+      //Turn right
+      cmd.servo = 80;
+      cmd.motor = 97;
   }
-
+/*
   for (int i =0; i <merged_blocks.size() ; i++){
       LaserPoint &p = merged_blocks[i].front();
       LaserPoint &q = merged_blocks[i].back();
@@ -196,6 +201,8 @@ void nextMove(int* move, vector<LaserPoint> points){
       printf("Mergeblocks i: %d, start: %f, end: %f, b1: %f, b2: %f\n", i, p.angle, q.angle, b1, b2);
   }
   std::cout << "final_pt_i.angle: "<<final_pt_angle<<std::endl;
+*/
+
 
   //Plot all points
   for (int i=0; i <points.size();i++){
@@ -238,7 +245,10 @@ void nextMove(int* move, vector<LaserPoint> points){
   plt::plot(vector<float>{0, float(0.5*cos(final_pt_angle))}, vector<float>{0, float(0.5*sin(final_pt_angle))});
 
 
-  printf("Move: %d, %d\nrobot:: (x,y): (%f,%f), angle: %f\n", move[0],move[1],robot_global.x, robot_global.y, robot_global.angle);
-  plt::show(); 
-    
+  printf("servo: %d, motor: %d\nrobot:: (x,y): (%f,%f), angle: %f\n", cmd.servo,cmd.motor,robot_global.x, robot_global.y, robot_global.angle);
+//  plt::show(); 
+  if (!write_file.empty()){
+    plt::save(write_file); 
+  }
+
 }
