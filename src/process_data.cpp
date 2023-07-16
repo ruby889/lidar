@@ -5,6 +5,11 @@
 #include "../matplotlibcpp.h"
 namespace plt = matplotlibcpp;
 using namespace std;
+static LaserPoint target;
+static LaserPoint robot;
+static LaserPoint robot_global;
+static LaserPoint target_global;
+
 
 float cosRule(const LaserPoint& p1, const LaserPoint& p2){
     float R1 = p1.range;
@@ -46,25 +51,21 @@ bool mergeBlocks(vector<LaserPoint> bk1, vector<LaserPoint>bk2, vector<vector<La
 }
 
 void nextMove(int* move, vector<LaserPoint> points){
-  LaserPoint target;
   target.x = 1;
   target.y = 0;
   target.angle = atan2(target.y, target.x);
   target.range = sqrt(target.x*target.x + target.y*target.y);
 
-  LaserPoint robot;
   robot.x = 0;
   robot.y = 0;
   robot.range = 0;
   robot.angle = 0;
 
-  LaserPoint robot_global;
   robot_global.x = 0;
   robot_global.y = 0;
   robot_global.range = 0;
   robot_global.angle = 0;
 
-  LaserPoint target_global;
   target_global.x = 1;
   target_global.y = 0;
   target_global.angle = atan2(target.y, target.x);
@@ -78,6 +79,7 @@ void nextMove(int* move, vector<LaserPoint> points){
   float s1 = robot_vel*robot_vel/(2*robot_dec); // Decelerating space component
   float robot_turning_delta = 0.1;
 
+  //Calculate (x,y) coordinates
   for(int i =0; i < points.size(); i++){
       LaserPoint& prev = points[i-1];
       LaserPoint& p = points[i];
@@ -87,15 +89,14 @@ void nextMove(int* move, vector<LaserPoint> points){
       float y = range*sin(theta);
       p.x = x;
       p.y = y;
-      
       if (range > 10){ 
           points[i].range = 0;
           continue;
       }
   }
 
-  plt::figure_size(1500, 780);
-  // plt::figure_size(1200, 700);
+//   plt::figure_size(1500, 780);
+  plt::figure_size(800, 700);
   vector<float> X, Y, colors;
   vector<float> X1, Y1;
   vector<float> X3, Y3;
@@ -122,7 +123,7 @@ void nextMove(int* move, vector<LaserPoint> points){
       }
   }
   
-  //Merging
+  //Merging close blocks
   vector< vector<LaserPoint>> merged_blocks;
   if (blocks.size() > 0){
       merged_blocks.push_back(blocks[0]);
@@ -146,6 +147,7 @@ void nextMove(int* move, vector<LaserPoint> points){
       }
   }
   
+  //Find the optimal path by distance 
   float final_pt_angle = 0;
   float final_min_cost = (std::numeric_limits<float>::max)();
   float start = - M_PI;

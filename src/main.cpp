@@ -308,7 +308,7 @@ int main(int argc, char *argv[])
     }
   }
 
-  FILE * pFileTXT = fopen ("scan_pts.txt","a");
+  FILE * pFileTXT = fopen("scan_pts.txt","a");
   LaserScan scan;
   while (ydlidar::os_isOk())
   {
@@ -317,19 +317,17 @@ int main(int argc, char *argv[])
       printf("Scan received [%u] points inc [%f]\n",
              (unsigned int)scan.points.size(),
              scan.config.angle_increment);
-      // for (size_t i = 0; i < scan.points.size(); ++i)
-      // {
-      //   const LaserPoint &p = scan.points.at(i);
-      //   printf("%d d %f a %f\n", i, p.range, p.angle * 180.0 / M_PI);
+      // fflush(stdout);
+      // for(int i =0; i < scan.points.size(); i++){
+      //   fprintf (pFileTXT, "%f, %f, %f\n", scan.points[i].angle, scan.points[i].range, scan.points[i].intensity);
       // }
-      fflush(stdout);
-      for(int i =0; i < scan.points.size(); i++){
-        fprintf (pFileTXT, "%f, %f, %f\n", scan.points[i].angle, scan.points[i].range, scan.points[i].intensity);
-      }
 
       int move[2];
       nextMove(move, scan.points);
-
+      unsigned char serial_cmd[2];
+      serial_cmd[0] = move[0];
+      serial_cmd[1] = move[1];
+      arduino_serial.write(serial_cmd);
     }else{
       fprintf(stderr, "Failed to get Lidar Data\n");
       fflush(stderr);
@@ -338,7 +336,7 @@ int main(int argc, char *argv[])
   laser.turnOff();
   laser.disconnecting();
 
-  fclose (pFileTXT);
+  fclose(pFileTXT);
   arduino_serial.close();
   return 0;
 }
