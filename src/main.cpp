@@ -43,7 +43,8 @@
 #include <fstream>
 #include <limits>
 #include <math.h>
-#include <chrono>
+#include <chrono> 
+#include <stdio.h>
 #include "../matplotlibcpp.h"
 #include <core/common/ydlidar_def.h>
 #include "process_data.h"
@@ -75,7 +76,9 @@ Serial arduino_serial;
 int main(int argc, char *argv[])
 {
   arduino_serial.serial_open((char*)"/dev/ttyUSB1");
-  
+  FILE* logfile = fopen("./log.txt", "w");
+
+
   std::string port;
   ydlidar::os_init();
 
@@ -310,27 +313,14 @@ int main(int argc, char *argv[])
     }
   }
 
-  FILE * pFileTXT = fopen("scan_pts.txt","a");
-  string write_path = "./data/";
-  int img_i = 0;
   long t0 = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
   LaserScan scan;
   while (ydlidar::os_isOk())
   {
     if (laser.doProcessSimple(scan))
     {
-//      printf("Scan received [%u] points inc [%f]\n",
-//             (unsigned int)scan.points.size(),
-//             scan.config.angle_increment);
-      // fflush(stdout);
-      // for(int i =0; i < scan.points.size(); i++){
-      //   fprintf (pFileTXT, "%f, %f, %f\n", scan.points[i].angle, scan.points[i].range, scan.points[i].intensity);
-      // }
-
       RobotCmd cmd;
-      string write_file = write_path + to_string(img_i) + ".png";
-      img_i++;
-      nextMove(cmd, scan.points, write_file);
+      nextMove(cmd, scan.points, logfile);
       long t1 = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
       printf("time: %d ms\n", t1 - t0);
       t0 = t1;
@@ -348,8 +338,8 @@ int main(int argc, char *argv[])
   arduino_serial.serial_write(serial_cmd);
   laser.turnOff();
   laser.disconnecting();
-
-  fclose(pFileTXT);
+  
+  fclose(logfile);
   arduino_serial.serial_close();
   return 0;
 }

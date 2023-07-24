@@ -46,4 +46,3 @@ add_executable(${APP_NAME}
   ${src_files}
 )
 target_link_libraries(${APP_NAME} ${PROJECT_NAME} matplotlib_cpp)
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/data)
