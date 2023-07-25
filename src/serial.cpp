@@ -1,5 +1,6 @@
 #include "serial.h"
 #include <stdio.h>
+#include <cstring>
 #ifdef WIN32
     #include "windows.h"
 #else
@@ -11,7 +12,7 @@
 
 #include <climits>
 
-int Serial::open(const char com_id[], int baud_rate, int byte_size, int parity, int stop_bits){
+int Serial::serial_open(const char com_id[], int baud_rate, int byte_size, int parity, int stop_bits){
 #ifdef WIN32
     hCom_ = CreateFile((LPCSTR)com_id,
                       GENERIC_READ | GENERIC_WRITE, // open mode: read & write  
@@ -115,7 +116,7 @@ int Serial::open(const char com_id[], int baud_rate, int byte_size, int parity, 
   return 0;
 }
 
-int Serial::write(BYTE write_buffer[]){
+int Serial::serial_write(BYTE write_buffer[]){
 #ifdef WIN32
     COMSTAT ComStat;
     DWORD dwErrorFlags;
@@ -140,7 +141,7 @@ int Serial::write(BYTE write_buffer[]){
 }
 
 
-int Serial::close(){
+int Serial::serial_close(){
 #ifdef WIN32
     return CloseHandle(hCom_);
 #else

@@ -43,12 +43,15 @@
 #include <fstream>
 #include <limits>
 #include <math.h>
+#include <chrono> 
+#include <stdio.h>
 #include "../matplotlibcpp.h"
 #include <core/common/ydlidar_def.h>
 #include "process_data.h"
 #include "serial.h"
-namespace plt = matplotlibcpp;
 
+using namespace std::chrono;
+namespace plt = matplotlibcpp;
 using namespace std;
 using namespace ydlidar;
 Serial arduino_serial;
@@ -72,7 +75,9 @@ Serial arduino_serial;
 
 int main(int argc, char *argv[])
 {
-  arduino_serial.open((char*)"/dev/ttyUSB0");
+  arduino_serial.serial_open((char*)"/dev/ttyUSB1");
+  FILE* logfile = fopen("./log.txt", "w");
+
 
   std::string port;
   ydlidar::os_init();
@@ -190,7 +195,7 @@ int main(int argc, char *argv[])
 
   std::string input_frequency;
 
-  float frequency = 5.0;
+  float frequency = 7.0;
 
   while (ydlidar::os_isOk() && !isSingleChannel)
   {
@@ -308,35 +313,33 @@ int main(int argc, char *argv[])
     }
   }
 
-  FILE * pFileTXT = fopen("scan_pts.txt","a");
+  long t0 = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
   LaserScan scan;
   while (ydlidar::os_isOk())
   {
     if (laser.doProcessSimple(scan))
     {
-      printf("Scan received [%u] points inc [%f]\n",
-             (unsigned int)scan.points.size(),
-             scan.config.angle_increment);
-      // fflush(stdout);
-      // for(int i =0; i < scan.points.size(); i++){
-      //   fprintf (pFileTXT, "%f, %f, %f\n", scan.points[i].angle, scan.points[i].range, scan.points[i].intensity);
-      // }
-
-      int move[2];
-      nextMove(move, scan.points);
-      unsigned char serial_cmd[2];
-      serial_cmd[0] = move[0];
-      serial_cmd[1] = move[1];
-      arduino_serial.write(serial_cmd);
+      RobotCmd cmd;
+      nextMove(cmd, scan.points, logfile);
+      long t1 = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+      printf("time: %d ms\n", t1 - t0);
+      t0 = t1;
+      string str_cmd = to_string(cmd.servo) + ',' + to_string(cmd.motor) + ',';
+      unsigned char serial_cmd[10];
+      copy(str_cmd.cbegin(), str_cmd.cend(), serial_cmd);
+      arduino_serial.serial_write(serial_cmd);
     }else{
       fprintf(stderr, "Failed to get Lidar Data\n");
       fflush(stderr);
     }
   }
+
+  unsigned char serial_cmd[10] = "90,90";
+  arduino_serial.serial_write(serial_cmd);
   laser.turnOff();
   laser.disconnecting();
-
-  fclose(pFileTXT);
-  arduino_serial.close();
+  
+  fclose(logfile);
+  arduino_serial.serial_close();
   return 0;
 }
