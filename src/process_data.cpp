@@ -262,14 +262,14 @@ void writeLog(FILE* logfile, const vector<LaserPoint>& points, const vector<vect
   //Plot all points
   for (int i=0; i <points.size();i++){
       if (points[i].range == 0) continue;
-      fprintf(logfile, "(%f, %f) ", points[i].x, points[i].y);
+      fprintf(logfile, "(%f,%f) ", points[i].x, points[i].y);
   }
   fprintf(logfile, "| ");
 
   //Plot obstables
   for (int i=0; i<merged_blocks.size(); i++){
       for (int j = 0; j <merged_blocks[i].size(); j++){
-          fprintf(logfile, "(%f, %f) ", merged_blocks[i][j].x, merged_blocks[i][j].y);
+          fprintf(logfile, "(%f,%f) ", merged_blocks[i][j].x, merged_blocks[i][j].y);
       }
     fprintf(logfile, "/ ");
   }
